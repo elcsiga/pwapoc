@@ -1,0 +1,8 @@
+.note {
+  margin: 10px 0;
+}
+.note button {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
