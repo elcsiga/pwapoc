@@ -9,7 +9,8 @@
     "e2e": "ng e2e",
     "copy-sw": "cd service-worker && copyfiles sw.js ../dist/pwapoc",
     "serve": "http-server -p 8080 -c-1 dist/pwapoc",
-    "start": "npm run build && npm run copy-sw && npm run serve"
+    "start": "npm run build && npm run copy-sw && npm run serve",
+    "s": "npm run copy-sw && npm run serve"
   },
   "private": true,
   "dependencies": {
