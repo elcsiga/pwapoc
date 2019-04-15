@@ -1,3 +1,5 @@
+self.importScripts('sw-polyfills.js');
+
 const CACHE_NAME = 'my-site-cache-v1';
 const urlsToCache = [];
 
@@ -24,23 +26,32 @@ self.addEventListener('fetch', event => {
   // finding a resolver
   let currentResolver = null;
   resolvers.forEach(resolver => {
-    if (resolver.matchUrl(event.request.ur))
+    if (resolver.matchUrl(event.request.url))
       currentResolver = resolver;
   });
 
   if (currentResolver) {
-    event.respondWith( async function() {
+    event.respondWith(async function () {
 
-      const requestClone = event.request.clone();
       let body = null;
-      if (requestClone.method === 'POST') {
-        body = requestClone.json();
+      if (event.request.method === 'POST') {
+        body = await event.request.clone().json();
       }
-      console.log('SW RESOLVERD', requestClone.url, body);
-      return fetch(event.request);
-    });
-  }
-  else {
+
+      if (event.request.method === 'GET') {
+        console.log('SW GET:', event.request.url);
+
+        return fetch(event.request).then(response => {
+          return cloneWritableResponse(response);
+        });
+
+      } else {
+        console.log('SW POST RESOLVED', event.request.url, body);
+        return fetch(event.request);
+      }
+
+    }());
+  } else {
     console.log('SW FETCH BYPASS', event.request.url);
   }
 
@@ -83,15 +94,36 @@ self.addEventListener('fetch', event => {
   //     })
 
 
-
 });
 
 class NoteResolver {
   matchUrl(url) {
-    return url.startsWidth('http://localhost:3000/api/notes');
+    return url.startsWith('http://localhost:3000/api/notes');
   }
 }
 
 const resolvers = [new NoteResolver()];
 
 
+function cloneWritableResponse(response) {
+
+  var init = {
+    status: response.status,
+    statusText: response.statusText,
+    type: response.type,
+    url: response.url,
+    headers: {}
+  };
+
+  response.headers.forEach(function (v, k) {
+    init.headers[k] = v;
+  });
+
+  console.log('RESPONSE', response);
+  return response.clone().json().then(body => {
+    //return response;
+    const r = new Response(JSON.stringify(body), init);
+    console.log('RESPONSE2', r);
+    return r;
+  });
+}
