@@ -1,6 +1,7 @@
 import {Component, OnInit, ViewChild} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Note} from '../../common';
+import {fromEvent} from 'rxjs/internal/observable/fromEvent';
 
 const serverUrl = 'http://localhost:3000';
 
@@ -11,8 +12,7 @@ const serverUrl = 'http://localhost:3000';
 })
 export class AppComponent implements OnInit {
 
-  public notes;
-
+  notes: Note[];
   @ViewChild('newnote') newNoteInput;
 
   constructor(
@@ -21,7 +21,7 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.httpClient.get(serverUrl + '/api/notes').subscribe(
+    this.httpClient.get<Note[]>(serverUrl + '/api/notes').subscribe(
       notes => this.notes = notes,
       e => this.showError(e)
     );
@@ -29,10 +29,19 @@ export class AppComponent implements OnInit {
 
   onNoteEdited(note: Note) {
     const {id, text} = note;
-    this.notes.find(n => n.id === id).text = text;
+    const index = this.notes.findIndex(n => n.id === id);
+    this.notes[index].text = text;
+    this.notes[index].status = 'edited';
+
     this.httpClient.put<Note>(serverUrl + '/api/notes/' + id, {text}).subscribe(
-      n => console.log(n),
-      e => this.showError(e)
+      n => {
+        const index = this.notes.findIndex(n => n.id === id);
+        this.notes[index] = n;
+      },
+      e => {
+        this.notes[index].status = 'invalid';
+        this.showError(e);
+      }
     );
   }
 
@@ -58,7 +67,7 @@ export class AppComponent implements OnInit {
   }
 
   showError(e) {
-    alert(e.error.message);
+    //alert(e.error.message);
     console.error(e);
   }
 }

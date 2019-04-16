@@ -1,0 +1,14 @@
+.online, .offline {
+  color: white;
+  padding: 3px 6px;
+  border-radius: 2px;
+  font-size: .7em;
+}
+
+.offline {
+  background: blue;
+}
+
+.online {
+  background: green;
+}

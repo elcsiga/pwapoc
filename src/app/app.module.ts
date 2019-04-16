@@ -8,11 +8,15 @@ import {NoteListComponent} from './note-list/note-list.component';
 import {HttpClientModule} from '@angular/common/http';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {MatButtonModule, MatCardModule, MatIconModule, MatInputModule, MatToolbarModule} from '@angular/material';
+import { StatusComponent } from './status/status.component';
+import { HeaderComponent } from './header/header.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    NoteListComponent
+    NoteListComponent,
+    StatusComponent,
+    HeaderComponent
   ],
   imports: [
     BrowserModule,

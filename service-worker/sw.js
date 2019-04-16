@@ -1,5 +1,3 @@
-self.importScripts('sw-polyfills.js');
-
 const CACHE_NAME = 'my-site-cache-v1';
 const urlsToCache = [];
 
@@ -7,6 +5,7 @@ self.addEventListener('install', event => {
 
   console.log('SW INSTALLED');
 
+  /*
   // Perform install steps
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -15,15 +14,18 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
   );
+  */
 });
 
 self.addEventListener('activate', event => {
   console.log('SW ACTIVATE');
 });
 
+/*
 self.addEventListener('fetch', event => {
 
-  // finding a resolver
+  console.log('SW FETCH');
+
   let currentResolver = null;
   resolvers.forEach(resolver => {
     if (resolver.matchUrl(event.request.url))
@@ -34,65 +36,48 @@ self.addEventListener('fetch', event => {
     event.respondWith(async function () {
 
       let body = null;
-      if (event.request.method === 'POST') {
+      if (event.request.method === 'POST' || event.request.method === 'PUT') {
         body = await event.request.clone().json();
       }
 
       if (event.request.method === 'GET') {
         console.log('SW GET:', event.request.url);
 
-        return fetch(event.request).then(response => {
-          return cloneWritableResponse(response);
-        });
+        return fetch(event.request)
+          .then( response => {
+            console.log('SW RESPOND ONLNE:');
 
+            if (response && response.status === 200 && response.type === 'basic') {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then(cache =>  {
+                  console.log('SW RESPOND ADDED TI CACHE');
+                  cache.put(event.request, responseToCache);
+              });
+            }
+            return response;
+          })
+          .catch( error => {
+            return caches.match(event.request)
+              .then(response => {
+
+                if (response) {
+                  console.log('SW RESPOND FROM CACHE:');
+                  return response;
+                } else {
+                  console.log('SW RESPOND ERROR ');
+                  return error;
+                }
+              });
+          });
       } else {
         console.log('SW POST RESOLVED', event.request.url, body);
         return fetch(event.request);
       }
-
     }());
   } else {
     console.log('SW FETCH BYPASS', event.request.url);
   }
-
-  // return fetch(event.request).then(response => {
-  //
-  //   // Check if we received a valid response
-  //   if (!response || response.status !== 200 || response.type !== 'basic') {
-  //     return response;
-  //   }
-  //
-  //   event.respondWith();
-  //
-  //   caches.match(event.request)
-  //     .then(response => {
-  //
-  //       if (response) {
-  //         return response;
-  //       }
-  //
-  //       return fetch(event.request).then(response => {
-  //           // Check if we received a valid response
-  //           if (!response || response.status !== 200 || response.type !== 'basic') {
-  //             return response;
-  //           }
-  //
-  //           // // IMPORTANT: Clone the response. A response is a stream
-  //           // // and because we want the browser to consume the response
-  //           // // as well as the cache consuming the response, we need
-  //           // // to clone it so we have two streams.
-  //           // const responseToCache = response.clone();
-  //           //
-  //           // caches.open(CACHE_NAME)
-  //           //   .then(function(cache) {
-  //           //     cache.put(event.request, responseToCache);
-  //           //   });
-  //
-  //           return response;
-  //         }
-  //       );
-  //     })
-
 
 });
 
@@ -106,7 +91,6 @@ const resolvers = [new NoteResolver()];
 
 
 function cloneWritableResponse(response) {
-
   var init = {
     status: response.status,
     statusText: response.statusText,
@@ -119,11 +103,10 @@ function cloneWritableResponse(response) {
     init.headers[k] = v;
   });
 
-  console.log('RESPONSE', response);
   return response.clone().json().then(body => {
     //return response;
     const r = new Response(JSON.stringify(body), init);
-    console.log('RESPONSE2', r);
     return r;
   });
 }
+*/

@@ -1,0 +1,22 @@
+.edited, .invalid, .cached, .saved {
+  color: white;
+  padding: 3px 6px;
+  border-radius: 2px;
+  font-size: .7em;
+}
+
+.edited {
+  background: orange;
+}
+
+.invalid {
+  background: red;
+}
+
+.cached {
+  background: blue;
+}
+
+.saved {
+  background: green;
+}

@@ -1,16 +1,24 @@
 <mat-card class="note" *ngFor="let note of notes">
 
-  <p *ngIf="editedNoteId !== note.id"
-     (click)="editedNoteId = note.id"> {{note.text}}
+  <div *ngIf="editedNoteId !== note.id"
+       (click)="editedNoteId = note.id">
 
-    <button mat-button mat-icon-button (click)="onNoteDeleted.emit(note)">
-      <mat-icon>close</mat-icon>
-    </button>
-  </p>
+    <p>
+      {{note.text}}
+
+      <button mat-button mat-icon-button (click)="onNoteDeleted.emit(note)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </p>
+    <p>
+      <app-status [status]="note.status"></app-status>
+    </p>
+
+  </div>
 
   <mat-form-field *ngIf="editedNoteId === note.id" [style.width]="'100%'">
 
-    <input (blur)="editedNoteId = -1; onNoteEdited.emit({id: note.id, text: $event.target.value});"
+    <input (blur)="editedNoteId = -1; onNoteEdited.emit({id: note.id, text: $event.target.value, status: 'edited'});"
            matInput [value]="note.text"/>
   </mat-form-field>
 
