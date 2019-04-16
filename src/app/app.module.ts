@@ -3,7 +3,6 @@ import {NgModule} from '@angular/core';
 
 import {AppComponent} from './app.component';
 import {ServiceWorkerModule} from '@angular/service-worker';
-import {environment} from '../environments/environment';
 import {NoteListComponent} from './note-list/note-list.component';
 import {HttpClientModule} from '@angular/common/http';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
@@ -28,10 +27,19 @@ import { HeaderComponent } from './header/header.component';
     MatIconModule,
     MatCardModule,
     // ServiceWorkerModule.register('ngsw-worker.js', {enabled: true})
-    ServiceWorkerModule.register('sw.js', {enabled: true})
+    // ServiceWorkerModule.register('sw.js', {enabled: true})
   ],
   providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule {
+
+  constructor() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        //console.log('REGISTERING SERVICE WORKER');
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+  }
 }

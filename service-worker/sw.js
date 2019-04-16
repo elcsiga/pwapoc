@@ -21,10 +21,7 @@ self.addEventListener('activate', event => {
   console.log('SW ACTIVATE');
 });
 
-/*
 self.addEventListener('fetch', event => {
-
-  console.log('SW FETCH');
 
   let currentResolver = null;
   resolvers.forEach(resolver => {
@@ -45,9 +42,9 @@ self.addEventListener('fetch', event => {
 
         return fetch(event.request)
           .then( response => {
-            console.log('SW RESPOND ONLNE:');
+            console.log('SW RESPOND ONLNE:', response);
 
-            if (response && response.status === 200 && response.type === 'basic') {
+            if (response && response.status === 200) {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME)
                 .then(cache =>  {
@@ -59,11 +56,15 @@ self.addEventListener('fetch', event => {
           })
           .catch( error => {
             return caches.match(event.request)
-              .then(response => {
+              .then(async function(response) {
 
                 if (response) {
+                  const body = await response.clone().json();
+                  body.forEach( n => n.status = 'cached');
+                  const responsePatched = composeResponse(body, response);
+
                   console.log('SW RESPOND FROM CACHE:');
-                  return response;
+                  return responsePatched;
                 } else {
                   console.log('SW RESPOND ERROR ');
                   return error;
@@ -76,7 +77,7 @@ self.addEventListener('fetch', event => {
       }
     }());
   } else {
-    console.log('SW FETCH BYPASS', event.request.url);
+    //console.log('SW FETCH BYPASS', event.request.url);
   }
 
 });
@@ -90,7 +91,7 @@ class NoteResolver {
 const resolvers = [new NoteResolver()];
 
 
-function cloneWritableResponse(response) {
+function composeResponse(body, response) {
   var init = {
     status: response.status,
     statusText: response.statusText,
@@ -103,10 +104,6 @@ function cloneWritableResponse(response) {
     init.headers[k] = v;
   });
 
-  return response.clone().json().then(body => {
-    //return response;
-    const r = new Response(JSON.stringify(body), init);
-    return r;
-  });
+  return new Response(JSON.stringify(body), init);
 }
-*/
+

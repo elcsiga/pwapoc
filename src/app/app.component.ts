@@ -20,11 +20,15 @@ export class AppComponent implements OnInit {
   ) {
   }
 
-  ngOnInit(): void {
+  updateNotes() {
+    this.notes = [];
     this.httpClient.get<Note[]>(serverUrl + '/api/notes').subscribe(
       notes => this.notes = notes,
       e => this.showError(e)
     );
+  }
+  ngOnInit(): void {
+    this.updateNotes();
   }
 
   onNoteEdited(note: Note) {
