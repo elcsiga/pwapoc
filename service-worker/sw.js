@@ -33,11 +33,34 @@ self.addEventListener('fetch', event => {
     event.respondWith(async function () {
 
       let body = null;
-      if (event.request.method === 'POST' || event.request.method === 'PUT') {
-        body = await event.request.clone().json();
+      if (event.request.method === 'PUT') {
+        console.log('SW PUT:', event.request.url);
+        const body = await event.request.clone().json();
+
+        return fetch(event.request)
+          .then(response => {
+            console.log('SW PUT ONLNE');
+            return response;
+          })
+          .catch( error => {
+            currentResolver.handlePut(body);
+            return composeResponse(body);
+          });
       }
 
-      if (event.request.method === 'GET') {
+      else if (event.request.method === 'POST') {
+        console.log('SW POST:', event.request.url);
+        const body = await event.request.clone().json();
+
+        return fetch(event.request)
+          .then(response => console.log('SW PUT ONLNE'))
+          .catch( error => {
+            currentResolver.handlePut(body);
+            return composeResponse(body);
+          });
+      }
+
+      else if (event.request.method === 'GET') {
         console.log('SW GET:', event.request.url);
 
         return fetch(event.request)
@@ -48,7 +71,7 @@ self.addEventListener('fetch', event => {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME)
                 .then(cache =>  {
-                  console.log('SW RESPOND ADDED TI CACHE');
+                  console.log('SW RESPOND ADDED TO CACHE');
                   cache.put(event.request, responseToCache);
               });
             }
@@ -60,7 +83,7 @@ self.addEventListener('fetch', event => {
 
                 if (response) {
                   const body = await response.clone().json();
-                  body.forEach( n => n.status = 'cached');
+                  currentResolver.patchGet(body);
                   const responsePatched = composeResponse(body, response);
 
                   console.log('SW RESPOND FROM CACHE:');
@@ -71,9 +94,6 @@ self.addEventListener('fetch', event => {
                 }
               });
           });
-      } else {
-        console.log('SW POST RESOLVED', event.request.url, body);
-        return fetch(event.request);
       }
     }());
   } else {
@@ -83,24 +103,54 @@ self.addEventListener('fetch', event => {
 });
 
 class NoteResolver {
+
+  constructor() {
+    this.changelog = [];
+  }
+
   matchUrl(url) {
     return url.startsWith('http://localhost:3000/api/notes');
+  }
+
+  patchGet(notes) {
+    this.changelog.forEach( c => {
+      const index = notes.findIndex(n => c.id === n.id);
+      if (index) {
+        notes[index] = c;
+      } else {
+        notes.puh(c);
+      }
+    });
+  }
+
+  handlePut(note) {
+    const index = this.changelog.findIndex( n => n.id === note.id);
+    if (index) {
+      this.changelog.splice(index, 1);
+    }
+    this.changelog.push( {...note, status: 'cached'});
   }
 }
 
 const resolvers = [new NoteResolver()];
 
-
+let responseTemplate;
 function composeResponse(body, response) {
-  var init = {
-    status: response.status,
-    statusText: response.statusText,
-    type: response.type,
-    url: response.url,
+
+  const r = response || responseTemplate;
+  if (!responseTemplate) {
+    responseTemplate = response.clone();
+  }
+
+  const init = {
+    status: r.status,
+    statusText: r.statusText,
+    type: r.type,
+    url: r.url,
     headers: {}
   };
 
-  response.headers.forEach(function (v, k) {
+  r.headers.forEach(function (v, k) {
     init.headers[k] = v;
   });
 

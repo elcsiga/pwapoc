@@ -21,7 +21,7 @@ export class AppComponent implements OnInit {
   }
 
   updateNotes() {
-    this.notes = [];
+    this.notes = undefined;
     this.httpClient.get<Note[]>(serverUrl + '/api/notes').subscribe(
       notes => this.notes = notes,
       e => this.showError(e)
