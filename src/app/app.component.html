@@ -1,8 +1,13 @@
 <app-header></app-header>
 
 <div class="page">
+
+  <mat-progress-bar *ngIf="loading"
+    [mode]="'indeterminate'">
+  </mat-progress-bar>
+
   <app-note-list
-    [notes]="notes"
+    [notes]="getVisibleNotes()"
     (onNoteEdited)="onNoteEdited($event)"
     (onNoteDeleted)="onNoteDeleted($event)"
 
@@ -18,8 +23,12 @@
   </p>
 
   <p>
-    <button mat-raised-button color="primary"
-            (click)="updateNotes()">Update</button>
+    <button mat-raised-button color="primary" (click)="updateNotes()">Update</button>
+    &nbsp;
+    <button mat-raised-button [disabled]="getCachedNotes().length === 0" (click)="sync()">Sync</button>
+    &nbsp;
+    <span>Cache: {{getCachedNotes().length}}</span>
   </p>
 </div>
 
+<pre>{{notes | json}}</pre>

@@ -32,7 +32,11 @@ self.addEventListener('fetch', event => {
   if (currentResolver) {
     event.respondWith((async () => {
 
-      if (event.request.method === 'POST') {
+      if (event.request.url.endsWith('sync')) {
+        console.log('[SW] SYNC:', event.request.url);
+        return fetch(event.request)
+      }
+      else if (event.request.method === 'POST') {
         console.log('[SW] POST:', event.request.url);
 
         const requestBody = await event.request.clone().json();
@@ -50,7 +54,7 @@ self.addEventListener('fetch', event => {
 
         return fetch(event.request)
           .then(async response => {
-            console.log('[SW] SERVING BACKEND:', response.url);
+            console.log('[SW] SERVING FROM BACKEND:', response.url);
             await modifyCache('saved');
             return response;
           })
@@ -80,7 +84,7 @@ self.addEventListener('fetch', event => {
 
         return fetch(event.request)
           .then(async response => {
-            console.log('[SW] SERVING BACKEND:', response.url);
+            console.log('[SW] SERVING FROM BACKEND:', response.url);
             await modifyCache('saved');
             return response;
           })
@@ -88,6 +92,32 @@ self.addEventListener('fetch', event => {
             console.log('[SW] RETURNING AN OK RESPONSE FROM SW');
             const modifiedNote = await modifyCache('cached');
             return composeOkResponse(modifiedNote);
+          });
+
+      } else if (event.request.method === 'DELETE') {
+        console.log('[SW] DELETE:', event.request.url);
+
+        const id = +event.request.url.replace(currentResolver.url+'/', '');
+
+        return fetch(event.request)
+          .then(async response => {
+            console.log('[SW] SERVING FROM BACKEND:', response.url);
+            await patchCache(currentResolver.url, async body => {
+              const index = body.findIndex(n => n.id === id);
+              body.splice(index,1);
+              return body;
+            });
+            return response;
+          })
+          .catch(async error => {
+            console.log('[SW] RETURNING AN OK RESPONSE FROM SW');
+            let noteDeleted;
+            await patchCache(currentResolver.url, async body => {
+              noteDeleted = body.find(n => n.id === id);
+              noteDeleted.status = 'deleted';
+              return body;
+            });
+            return composeOkResponse(noteDeleted);
           });
 
       } else if (event.request.method === 'GET') {
@@ -123,6 +153,11 @@ self.addEventListener('fetch', event => {
               });
           });
       }
+      else {
+        console.log('[SW] UNHANDLED REQUEST:', event.request.url);
+        return fetch(event.request)
+      }
+
     })());
   } else {
     //console.log('SW FETCH BYPASS', event.request.url);

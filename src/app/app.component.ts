@@ -13,6 +13,8 @@ const serverUrl = 'http://localhost:3000';
 export class AppComponent implements OnInit {
 
   notes: Note[];
+  loading = false;
+
   @ViewChild('newnote') newNoteInput;
 
   constructor(
@@ -21,12 +23,38 @@ export class AppComponent implements OnInit {
   }
 
   updateNotes() {
-    this.notes = undefined;
+    this.loading = true;
     this.httpClient.get<Note[]>(serverUrl + '/api/notes').subscribe(
-      notes => this.notes = notes,
-      e => this.showError(e)
+      notes => { this.notes = notes; this.loading = false; },
+      e => { this.showError(e); this.loading = false; }
     );
   }
+
+  getCachedNotes() {
+    return this.notes ? this.notes.filter(n => n.status === 'cached' || n.status === 'deleted') : [];
+  }
+  getVisibleNotes() {
+    return this.notes ? this.notes.filter(n => n.status !== 'deleted') : [];
+  }
+
+
+  sync() {
+    const cachedNotes = this.getCachedNotes();
+    console.log('Sync:', cachedNotes);
+
+    this.httpClient.post<Note[]>(serverUrl + '/api/notes/sync', {
+      notes: cachedNotes
+    }).subscribe(
+      notes => {
+        alert('SUCCESS!');
+      },
+      e => {
+        alert('ERROR!');
+        this.showError(e);
+      }
+    );
+  }
+
   ngOnInit(): void {
     this.updateNotes();
   }

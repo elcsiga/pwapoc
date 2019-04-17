@@ -2,11 +2,19 @@ import {BrowserModule} from '@angular/platform-browser';
 import {NgModule} from '@angular/core';
 
 import {AppComponent} from './app.component';
-import {ServiceWorkerModule} from '@angular/service-worker';
+//import {ServiceWorkerModule} from '@angular/service-worker';
 import {NoteListComponent} from './note-list/note-list.component';
 import {HttpClientModule} from '@angular/common/http';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
-import {MatButtonModule, MatCardModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatToolbarModule} from '@angular/material';
+import {
+  MatButtonModule,
+  MatCardModule,
+  MatIconModule,
+  MatInputModule,
+  MatProgressBarModule,
+  MatProgressSpinnerModule,
+  MatToolbarModule
+} from '@angular/material';
 import { StatusComponent } from './status/status.component';
 import { HeaderComponent } from './header/header.component';
 
@@ -26,7 +34,7 @@ import { HeaderComponent } from './header/header.component';
     MatInputModule,
     MatIconModule,
     MatCardModule,
-    MatProgressSpinnerModule
+    MatProgressBarModule
     // ServiceWorkerModule.register('ngsw-worker.js', {enabled: true})
     // ServiceWorkerModule.register('sw.js', {enabled: true})
   ],
