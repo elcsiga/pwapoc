@@ -1,11 +1,11 @@
-.edited, .invalid, .cached, .saved {
+.touched, .invalid, .cached, .saved, .deleted {
   color: white;
   padding: 3px 6px;
   border-radius: 2px;
   font-size: .7em;
 }
 
-.edited {
+.touched {
   background: orange;
 }
 
@@ -19,4 +19,8 @@
 
 .saved {
   background: green;
+}
+
+.deleted {
+  background: red;
 }

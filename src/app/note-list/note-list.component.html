@@ -1,13 +1,17 @@
 <div *ngIf="notes">
   <mat-card class="note" *ngFor="let note of notes">
 
-    <div *ngIf="editedNoteId !== note.id"
-         (click)="editedNoteId = note.id">
+    <div *ngIf="editedNoteId !== note.id">
       <p>
         {{note.text}}
-        <button mat-button mat-icon-button (click)="onNoteDeleted.emit(note)">
-          <mat-icon>close</mat-icon>
-        </button>
+        <span class = "buttons">
+          <button mat-button mat-icon-button (click)="editedNoteId = note.id">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-button mat-icon-button (click)="onNoteDeleted.emit(note)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </span>
       </p>
       <p>
         <app-status [status]="note.status"></app-status>

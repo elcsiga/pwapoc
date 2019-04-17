@@ -3,7 +3,7 @@ const urlsToCache = [];
 
 self.addEventListener('install', event => {
 
-  console.log('SW INSTALLED');
+  console.log('[SW] INSTALLED');
 
   /*
   // Perform install steps
@@ -18,7 +18,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  console.log('SW ACTIVATE');
+  console.log('[SW] ACTIVATE');
 });
 
 self.addEventListener('fetch', event => {
@@ -30,72 +30,100 @@ self.addEventListener('fetch', event => {
   });
 
   if (currentResolver) {
-    event.respondWith(async function () {
+    event.respondWith((async () => {
 
-      let body = null;
-      if (event.request.method === 'PUT') {
-        console.log('SW PUT:', event.request.url);
-        const body = await event.request.clone().json();
+      if (event.request.method === 'POST') {
+        console.log('[SW] POST:', event.request.url);
+
+        const requestBody = await event.request.clone().json();
+        const text = requestBody.text;
+
+        const modifyCache = async status => {
+          const addedNote = { id: -1, text, status };
+          await patchCache(currentResolver.url, async body => {
+            addedNote.id = body.reduce((a,n) => a > n.id+1 ? a : n.id+1, 1000);
+            body.push(addedNote);
+            return body;
+          });
+          return addedNote;
+        };
+
+        return fetch(event.request)
+          .then(async response => {
+            console.log('[SW] SERVING BACKEND:', response.url);
+            await modifyCache('saved');
+            return response;
+          })
+          .catch(async error => {
+            console.log('[SW] RETURNING AN OK RESPONSE FROM SW');
+            const modifiedNote = await modifyCache('cached');
+            return composeOkResponse(modifiedNote);
+          });
+
+      }
+      else if (event.request.method === 'PUT') {
+        console.log('[SW] PUT:', event.request.url);
+
+        const requestBody = await event.request.clone().json();
+        const id = +event.request.url.replace(currentResolver.url+'/', '');
+        const text = requestBody.text;
+
+        const modifyCache = async status => {
+          const modifiedNote = { id, text, status };
+          await patchCache(currentResolver.url, async body => {
+            const index = body.findIndex(n => n.id === id);
+            body[index] = modifiedNote;
+            return body;
+          });
+          return modifiedNote;
+        };
+
+        return fetch(event.request)
+          .then(async response => {
+            console.log('[SW] SERVING BACKEND:', response.url);
+            await modifyCache('saved');
+            return response;
+          })
+          .catch(async error => {
+            console.log('[SW] RETURNING AN OK RESPONSE FROM SW');
+            const modifiedNote = await modifyCache('cached');
+            return composeOkResponse(modifiedNote);
+          });
+
+      } else if (event.request.method === 'GET') {
+        console.log('[SW] GET:', event.request.url);
 
         return fetch(event.request)
           .then(response => {
-            console.log('SW PUT ONLNE');
-            return response;
-          })
-          .catch( error => {
-            currentResolver.handlePut(body);
-            return composeResponse(body);
-          });
-      }
-
-      else if (event.request.method === 'POST') {
-        console.log('SW POST:', event.request.url);
-        const body = await event.request.clone().json();
-
-        return fetch(event.request)
-          .then(response => console.log('SW PUT ONLNE'))
-          .catch( error => {
-            currentResolver.handlePut(body);
-            return composeResponse(body);
-          });
-      }
-
-      else if (event.request.method === 'GET') {
-        console.log('SW GET:', event.request.url);
-
-        return fetch(event.request)
-          .then( response => {
-            console.log('SW RESPOND ONLNE:', response);
+            console.log('[SW] SERVING FROM BACKEND:', response.url);
 
             if (response && response.status === 200) {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME)
-                .then(cache =>  {
-                  console.log('SW RESPOND ADDED TO CACHE');
-                  cache.put(event.request, responseToCache);
-              });
+                .then(cache => {
+                  console.log('[SW] RESPONSE ADDED TO CACHE:', currentResolver.url);
+                  cache.put(currentResolver.url, responseToCache);
+                });
             }
             return response;
           })
-          .catch( error => {
-            return caches.match(event.request)
-              .then(async function(response) {
-
-                if (response) {
-                  const body = await response.clone().json();
-                  currentResolver.patchGet(body);
-                  const responsePatched = composeResponse(body, response);
-
-                  console.log('SW RESPOND FROM CACHE:');
-                  return responsePatched;
-                } else {
-                  console.log('SW RESPOND ERROR ');
-                  return error;
-                }
+          .catch(error => {
+            return caches.open(CACHE_NAME)
+              .then(cache => {
+                return cache.match(currentResolver.url)
+                  .then(async response => {
+                    if (response) {
+                      console.log('[SW] SERVING FROM CACHE:', response.url);
+                      return response;
+                    } else {
+                      console.log('SW RESPOND ERROR ');
+                      return error;
+                    }
+                  });
               });
           });
       }
-    }());
+    })());
   } else {
     //console.log('SW FETCH BYPASS', event.request.url);
   }
@@ -106,6 +134,7 @@ class NoteResolver {
 
   constructor() {
     this.changelog = [];
+    this.url = 'http://localhost:3000/api/notes';
   }
 
   matchUrl(url) {
@@ -113,7 +142,7 @@ class NoteResolver {
   }
 
   patchGet(notes) {
-    this.changelog.forEach( c => {
+    this.changelog.forEach(c => {
       const index = notes.findIndex(n => c.id === n.id);
       if (index) {
         notes[index] = c;
@@ -124,36 +153,66 @@ class NoteResolver {
   }
 
   handlePut(note) {
-    const index = this.changelog.findIndex( n => n.id === note.id);
+    const index = this.changelog.findIndex(n => n.id === note.id);
     if (index) {
       this.changelog.splice(index, 1);
     }
-    this.changelog.push( {...note, status: 'cached'});
+    this.changelog.push({...note, status: 'cached'});
   }
 }
 
 const resolvers = [new NoteResolver()];
 
-let responseTemplate;
 function composeResponse(body, response) {
 
-  const r = response || responseTemplate;
-  if (!responseTemplate) {
-    responseTemplate = response.clone();
-  }
-
   const init = {
-    status: r.status,
-    statusText: r.statusText,
-    type: r.type,
-    url: r.url,
+    status: response.status,
+    statusText: response.statusText,
+    type: response.type,
+    url: response.url,
     headers: {}
   };
 
-  r.headers.forEach(function (v, k) {
+  response.headers.forEach(function (v, k) {
     init.headers[k] = v;
   });
 
   return new Response(JSON.stringify(body), init);
 }
 
+function composeOkResponse(body) {
+  const init = {
+    status: 200,
+    statusText: 'OK',
+    headers: {'Content-Type': 'application/json'}
+  };
+  return new Response(JSON.stringify(body), init);
+}
+
+
+
+function patchCache(matcher, fn) {
+  return caches.open(CACHE_NAME)
+    .then(cache => {
+      return cache.match(matcher)
+        .then(async responseInCache => {
+          if (responseInCache) {
+            const body = await responseInCache.clone().json();
+
+            fn(body)
+              .then( patchedBody => {
+                const patchedResponse = composeResponse(patchedBody, responseInCache);
+                cache.put(matcher, patchedResponse);
+                console.log('[SW] CACHE PATCHED WITH:', patchedBody);
+              })
+              .catch( e => {
+                console.log('[SW] Unavle to patch cache!')
+              });
+          } else {
+            console.log('[SW] Cannot find cache!');
+          }
+        });
+    });
+
+
+}

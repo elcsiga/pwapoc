@@ -35,7 +35,7 @@ export class AppComponent implements OnInit {
     const {id, text} = note;
     const index = this.notes.findIndex(n => n.id === id);
     this.notes[index].text = text;
-    this.notes[index].status = 'edited';
+    this.notes[index].status = 'touched';
 
     this.httpClient.put<Note>(serverUrl + '/api/notes/' + id, {text}).subscribe(
       n => {
@@ -51,6 +51,9 @@ export class AppComponent implements OnInit {
 
   onNoteDeleted(note: Note) {
     const {id} = note;
+    const index = this.notes.findIndex(n => n.id === id);
+    this.notes[index].status = 'touched';
+
     this.httpClient.delete<Note>(serverUrl + '/api/notes/' + id).subscribe(
       noteDeleted => this.notes.splice(this.notes.findIndex(n => noteDeleted.id === n.id), 1),
       e => this.showError(e)

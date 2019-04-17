@@ -1,7 +1,7 @@
 .note {
   margin: 10px 0;
 }
-.note button {
+.note .buttons {
   position: absolute;
   right: 0;
   top: 0;
